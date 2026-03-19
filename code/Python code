@@ -1,0 +1,108 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report, roc_auc_score
+
+#Load Dataset 
+df=pd.read_csv("WA_Fn-UseC_-Telco-Customer-Churn.csv")
+
+#Data Understanding
+# print(df.head())
+# print(df.info())
+# print(df.describe())
+# print(df.isnull().sum())
+
+#Data Cleaning
+df['TotalCharges'] = pd.to_numeric(df['TotalCharges'], errors='coerce')
+df.dropna(inplace=True)
+df['Churn']=df['Churn'].map({'Yes': 1 , 'No':0})
+
+#EDA Using Matplotlib
+
+# Churn distribution
+
+churn_counts = df['Churn'].value_counts()
+plt.bar(churn_counts.index.astype(str), churn_counts.values)
+plt.title("Churn Distribution")
+plt.xlabel("churn_count")
+plt.ylabel("Count")
+plt.show()
+
+# Contract vs Churn
+
+contract_churn = pd.crosstab(df['Contract'], df['Churn'])
+# print(contract_churn)
+contract_churn.plot(kind='bar')
+plt.title("Contract vs Churn")
+plt.xlabel("Contract Type")
+plt.ylabel("Count")
+plt.show()
+
+#Monthly Charges Vs Churn
+
+plt.boxplot([df[df['Churn']==0]['MonthlyCharges'],
+             df[df['Churn']==1]['MonthlyCharges']])
+plt.xticks([1,2], ['No Churn', 'Churn'])
+plt.title("Monthly Charges vs Churn")
+plt.ylabel("Monthly Charges")
+plt.show()
+
+#Encoding
+df=pd.get_dummies(df,drop_first=True)
+
+#Spilt the data.
+X=df.drop('Churn',axis=1)
+y=df['Churn']
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+#Feature Scaling
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Logistic Regression
+lr = LogisticRegression(max_iter=1000)
+lr.fit(X_train, y_train)
+
+y_pred_lr = lr.predict(X_test)
+
+print("=== Logistic Regression ===")
+print("Accuracy:", accuracy_score(y_test, y_pred_lr))
+print("ROC-AUC:", roc_auc_score(y_test, y_pred_lr))
+print(confusion_matrix(y_test, y_pred_lr))
+print(classification_report(y_test, y_pred_lr))
+
+# Random Forest
+
+rf = RandomForestClassifier(n_estimators=100)
+rf.fit(X_train, y_train)
+
+y_pred_rf = rf.predict(X_test)
+
+print("\n=== Random Forest ===")
+print("Accuracy:", accuracy_score(y_test, y_pred_rf))
+print("ROC-AUC:", roc_auc_score(y_test, y_pred_rf))
+print(confusion_matrix(y_test, y_pred_rf))
+print(classification_report(y_test, y_pred_rf))
+
+ # Feature Importance
+
+importances = rf.feature_importances_
+feature_names = X.columns
+
+indices = np.argsort(importances)[-10:]
+
+plt.figure()
+plt.barh(range(len(indices)), importances[indices])
+plt.yticks(range(len(indices)), [feature_names[i] for i in indices])
+plt.title("Top 10 Important Features")
+plt.xlabel("Importance")
+plt.ylabel("Features")
+plt.show()
